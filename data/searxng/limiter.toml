@@ -1,0 +1,4 @@
+# SearXNG limiter configuration
+# Disabled for local use with Open WebUI
+[botdetection.ip_limit]
+link_token = false

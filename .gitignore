@@ -1,0 +1,32 @@
+# whitelist style
+*
+
+# root files
+!/README.md
+!/.gitignore
+!/secrets.template
+
+# track scripts
+!/scripts/
+!/scripts/**
+
+# track data/
+!/data/
+!/data/prompts/
+!/data/prompts/**
+!/data/searxng/
+!/data/searxng/**
+
+# track placeholders
+!/data/models/
+!/data/models/.gitkeep
+!/data/openwebui/
+!/data/openwebui/.gitkeep
+!/logs/
+!/logs/.gitkeep
+
+# nevertrack, regardless of above
+secrets
+*.env
+*.env.*
+*.bak
