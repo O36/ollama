@@ -32,7 +32,24 @@ log "=== Cold start ==="
 # debug
 #printf "checking tree\n"
 
-mkdir -p "$MODELS" "${DATA}/openwebui" "${DATA}/searxng" "$(dirname "$LOG")"
+mkdir -p "$MODELS" "${DATA}/openwebui" "${DATA}/searxng" "$(dirname "$LOG")" "${DATA}/obsidian/vault"
+if [[ ! -f "${DATA}/obsidian/vault/index.md" ]]; then
+    td=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+    cat > "${DATA}/obsidian/vault/index.md" << EOF
+---
+type: index
+title: Knowledge Bank
+description: Root index for this OKF bundle
+tags: []
+timestamp: "$td"
+---
+
+# Knowledge Bank
+
+Root concept index.
+EOF
+    log "Seeded initial OKF index.md in obsidian vault"
+fi
 
 # debug
 #printf "checking network\n"
@@ -175,7 +192,7 @@ podman run -d \
     --network ollama-net \
     -p 3000:8080 \
     -v "${DATA}/openwebui:/app/backend/data:Z" \
-    -v "${DATA}/obsidian/vault:/vault:Z,ro" \
+    -v "${DATA}/obsidian/vault:/vault:Z" \
     -e OLLAMA_BASE_URL=http://ollama:11434 \
     -e WEBUI_ADMIN_EMAIL="${WEBUI_ADMIN_EMAIL}" \
     -e WEBUI_ADMIN_PASSWORD="${WEBUI_ADMIN_PASSWORD}" \
