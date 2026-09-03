@@ -5,21 +5,21 @@ Local Ollama stack with Open WebUI and SearXNG. Designed for use with opencode.
 ## Directory Structure  
   
 ```
-ollama/  
-├── data/  
-│   ├── models/       # Ollama model storage (blobs, manifests, keys)  
-│   ├── openwebui/    # User accounts, chat history  
-│   ├── prompts/      # System prompt files  
-│   └── searxng/      # SearXNG configuration  
-├── logs/             # Application logs  
-├── scripts/  
-│   ├── coldstart.sh  # Bring up all containers from scratch  
-│   ├── stop.sh       # Stop container, optionally remove them  
-│   └── prompts.sh    # Prompt management  
-├── secrets           # Environment variables (git-ignored)  
-├── secrets.template  # Template - copy to secrets and fill in  
-├── README.md  
-└── LICENSE  
+ollama/
+├── data/
+│   ├── models/       # Ollama model storage (blobs, manifests, keys)
+│   ├── openwebui/    # User accounts, chat history
+│   ├── prompts/      # System prompt files
+│   └── searxng/      # SearXNG configuration
+├── logs/             # Application logs
+├── scripts/
+│   ├── coldstart.sh  # Bring up all containers from scratch
+│   ├── stop.sh       # Stop container, optionally remove them
+│   └── prompts.sh    # Prompt management
+├── secrets           # Environment variables (git-ignored)
+├── secrets.template  # Template - copy to secrets and fill in
+├── README.md
+└── LICENSE
 ```
   
 ## Prerequisites  
@@ -32,13 +32,13 @@ ollama/
 1. Copy the secrets.example file to secrets in the project root and fill in the values:  
   
 ```bash
-cp secrets.example secrets  
+cp secrets.template secrets
 ```
   
 2. Run the cold-start script:  
   
 ```bash
-./scripts/coldstart.sh  
+./scripts/coldstart.sh
 ```
   
 This creates the 'ollama-net' podman network, starts all three containers, and prompts you to pull a model.  
@@ -82,19 +82,19 @@ The cold-start script first shows models already installed, then presents an int
 Configure opencode to use the local Ollama instance. The API key is stored in your `secrets` file:  
   
 ```json  
-{  
-  "provider": {  
-    "ollama": {  
-      "apiKey": "${OPENCODE_OLLAMA_API_KEY}",  
-      "models": {  
-        "llama3.1:8b": {  
-          "maxTokens": 8192,  
-          "contextWindow": 128000  
-        }  
-      }  
-    }  
-  }  
-}  
+{
+  "provider": {
+    "ollama": {
+      "apiKey": "${OPENCODE_OLLAMA_API_KEY}",
+      "models": {
+        "llama3.1:8b": {
+          "maxTokens": 8192,
+          "contextWindow": 128000
+        }
+      }
+    }
+  }
+}
 ```
   
 ## Web Search (RAG)  
@@ -111,17 +111,17 @@ Open WebUI is pre-configured to use SearXNG for web search. To confirm:
 System prompts are stored in `data/prompts/` as Markdown files with YAML frontmatter. Use the management script to work with them:  
   
 ```bash
-# List all prompts  
-./scripts/prompts.sh list  
-  
-# Display a prompt (copy/paste into Open WebUI)  
-./scripts/prompts.sh show code-assistant  
-  
-# Create a new prompt interactively  
-./scripts/prompts.sh create  
-  
-# Delete a prompt  
-./scripts/prompts.sh delete creative-writer  
+# List all prompts
+./scripts/prompts.sh list
+
+# Display a prompt (copy/paste into Open WebUI)
+./scripts/prompts.sh show code-assistant
+
+# Create a new prompt interactively
+./scripts/prompts.sh create
+
+# Delete a prompt
+./scripts/prompts.sh delete creative-writer
 ```
   
 ### Using prompts in Open WebUI  
@@ -134,13 +134,13 @@ System prompts are stored in `data/prompts/` as Markdown files with YAML frontma
 ### Prompt file format  
   
 ```markdown
----  
-name: Code Assistant  
-description: Specialized in code review and refactoring  
-tags: [code, programming]  
 ---
-  
-You are a senior software engineer...  
+name: Code Assistant
+description: Specialized in code review and refactoring
+tags: [code, programming]
+---
+
+You are a senior software engineer...
 ```
   
 The YAML frontmatter (`name`, `description`, `tags`) is used for display purposes only. The actual system prompt is everything after the closing `---`.  
