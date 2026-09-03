@@ -17,6 +17,8 @@
 !/data/prompts/**
 !/data/searxng/
 !/data/searxng/**
+!/data/obsidian/
+!/data/obsidian/.gitkeep
 
 # track placeholders
 !/data/models/
