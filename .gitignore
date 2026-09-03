@@ -3,6 +3,7 @@
 
 # root files
 !/README.md
+!/LICENSE
 !/.gitignore
 !/secrets.template
 
