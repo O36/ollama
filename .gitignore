@@ -16,7 +16,8 @@
 !/data/prompts/
 !/data/prompts/**
 !/data/searxng/
-!/data/searxng/**
+!/data/searxng/settings.yml.template
+!/data/searxng/limiter.toml
 !/data/obsidian/
 !/data/obsidian/.gitkeep
 

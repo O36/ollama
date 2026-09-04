@@ -169,13 +169,22 @@ log "Model pull complete"
 # debug
 #printf "initializing searxng\n"
 
+if [[ ! -f "${DATA}/searxng/settings.yml" ]]; then
+    cp "${DATA}/searxng/settings.yml.template" "${DATA}/searxng/settings.yml"
+    log "Bootstrapped settings.yml from template"
+fi
+
+if ! grep -qF "secret_key: \"${SEARXNG_SECRET_KEY}\"" "${DATA}/searxng/settings.yml" 2>/dev/null; then
+    sed -i "s|secret_key: \".*\"|secret_key: \"${SEARXNG_SECRET_KEY}\"|" "${DATA}/searxng/settings.yml"
+    log "Injected searxng secret key into settings.yml"
+fi
+
 log "Starting searxng..."
 podman run -d \
     --name searxng \
     --network ollama-net \
     -p 8888:8080 \
     -v "${DATA}/searxng:/etc/searxng:Z" \
-    -e SEARXNG_SECRET="${SEARXNG_SECRET_KEY}" \
     docker.io/searxng/searxng:latest
 sleep 5
 
