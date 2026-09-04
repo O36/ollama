@@ -245,7 +245,7 @@ for i in $(seq 1 36); do
         break
     fi
     if [[ $i -eq 36 ]]; then
-        log "WARNING: OpenWebUI not configurmed ready after 180s, check manually"
+        log "WARNING: OpenWebUI not confirmed ready after 180s, check manually"
     fi
     sleep 5
 done
