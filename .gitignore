@@ -24,6 +24,8 @@
 # track placeholders
 !/data/models/
 !/data/models/.gitkeep
+!/data/models/imports/
+!/data/models/imports/.gitkeep
 !/data/openwebui/
 !/data/openwebui/.gitkeep
 !/logs/

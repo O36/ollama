@@ -8,6 +8,7 @@ set -euo pipefail
 SECRETS="$(dirname "$0")/../secrets"
 DATA="$(dirname "$0")/../data"
 MODELS="$(dirname "$0")/../data/models"
+IMPORTS="${DATA}/models/imports"
 LOG="$(dirname "$0")/../logs/ollama.log"
 
 # debug
@@ -46,7 +47,7 @@ log "=== Cold start ==="
 # debug
 #printf "checking tree\n"
 
-mkdir -p "$MODELS" "${DATA}/openwebui" "${DATA}/searxng" "$(dirname "$LOG")" "${DATA}/obsidian/vault"
+mkdir -p "$MODELS" "${DATA}/openwebui" "${DATA}/searxng" "$(dirname "$LOG")" "${DATA}/obsidian/vault" "$IMPORTS"
 if [[ ! -f "${DATA}/obsidian/vault/index.md" ]]; then
     td=$(date -u +%Y-%m-%dT%H:%M:%SZ)
     cat > "${DATA}/obsidian/vault/index.md" << EOF
@@ -95,6 +96,7 @@ podman run -d \
     -p 11434:11434 \
     -e OLLAMA_HOST=0.0.0.0:11434 \
     -v "${MODELS}:/root/.ollama:Z" \
+    -v "${DATA}/models/imports:/imports:Z" \
     ollama/ollama:latest
 
 # debug
@@ -115,7 +117,7 @@ for i in $(seq 1 12); do
     if [[ $i -eq 12 ]]; then
         log "ERROR: Ollama not ready after 60s, aborting"
         # debug
-        printf "ollama dead\n"
+        #printf "ollama dead\n"
         exit 1
     fi
     sleep 5
@@ -125,59 +127,105 @@ done
 #printf "initialize model selection\n"
 
 # --- Model selection ---
-echo ""
-echo "=== Models already installed ==="
-EXISTING=$(podman exec ollama ollama list 2>/dev/null | tail -n +2)
-if [[ -z "$EXISTING" ]]; then
-    echo "  (none)"
-else
-    podman exec ollama ollama list
-fi
-
-echo ""
-echo "=== Pull a new model ==="
-echo "  1) llama3.1:8b       general-purpose  8B   ~6 GB RAM   128k ctx"
-echo "  2) llama3.1:70b      general-purpose  70B  ~40 GB RAM  128k ctx"
-echo "  3) mistral           fast, efficient   7B   ~4 GB RAM   32k ctx"
-echo "  4) phi3              compact           3.8B ~2 GB RAM   128k ctx"
-echo "  5) gemma2            balanced          9B   ~5 GB RAM   8k ctx"
-echo "  6) codellama         code-focused      7B   ~4 GB RAM   16k ctx"
-echo "  7) deepseek-coder    code-focused      6.7B ~4 GB RAM   16k ctx"
-echo "  8) qwen2.5           strong reasoning  7B   ~5 GB RAM   128k ctx"
-echo "  9) qwen2.5:32b       strong reasoning  32B  ~20 GB RAM  128k ctx"
-echo " 10) custom            (type any model from ollama.com/library)"
-echo ""
-read -rp "Enter choice [1-10]: " choice
-
-case $choice in
-    1) MODEL="llama3.1:8b" ;;
-    2) MODEL="llama3.1:70b" ;;
-    3) MODEL="mistral" ;;
-    4) MODEL="phi3" ;;
-    5) MODEL="gemma2" ;;
-    6) MODEL="codellama" ;;
-    7) MODEL="deepseek-coder" ;;
-    8) MODEL="qwen2.5" ;;
-    9) MODEL="qwen2.5:32b" ;;
-    10)
-        read -rp "Enter model name (e.g. llama3.1:8b): " MODEL
-        if [[ -z "$MODEL" ]]; then
-            log "ERROR: no model name provided"
-            exit 1
-        fi
-        ;;
-    *)
-        log "ERROR: invalid choice"
-        exit 1
-        ;;
-esac
+print_installed() {
+    echo ""
+    echo "=== Models already installed ==="
+    EXISTING=$(podman exec ollama ollama list 2>/dev/null | tail -n +2)
+    if [[ -z "$EXISTING" ]]; then
+        echo "(none)"
+    else
+        podman exec ollama ollama list
+    fi
+}
 
 # debug
-#printf "model selection complete\n"
+#printf "starting selector\n"
 
-log "Pulling model: $MODEL"
-podman exec ollama ollama pull "$MODEL"
-log "Model pull complete"
+while true; do
+    print_installed
+
+    echo ""
+    echo "=== Pull a new model ==="
+    echo "  0) skip                 continue without pulling anything new"
+    echo "  1) huggingface          pull any GGUF model from huggingface.co/models"
+    echo "  2) ollama               (type any model from ollama.com/library)"
+    echo "  3) from local file      (import a .guff from local storage)"
+    echo ""
+    read -rp "Enter choice [0-3]: " choice
+
+    case "$choice" in
+        0)
+            log "Skipping model pull"
+            break
+            ;;
+        1)
+            echo ""
+            echo "Browse: https://huggingface.co/models?apps=ollama&sort=trending"
+            echo "On a model page: 'Use this model' -> Ollama, copy the reference shown"
+            echo "Format: org/repo:quantization (e.g. bartowski/Llama-3.2-1B-Instruct-GGUF:Q4_K_M)"
+            read -rp "HF model: " HF_REF
+            if [[ -z "$HF_REF" ]]; then
+                log "ERROR: no model reference entered, try again"
+                continue
+            fi
+            MODEL="hf.co/${HF_REF#hf.co/}"  # allowing users pasting the hf.co/ prefix
+            ;;
+        2)
+            read -rp "Enter model name (e.g. llama3.1:8b): " MODEL
+            if [[ -z "$MODEL" ]]; then
+                log "ERROR: no model name entered, try again"
+                continue
+            fi
+            ;;
+        3)
+            echo ""
+            echo "Place your .gguf file in: $IMPORTS"
+            echo "Files currently there:"
+            ls -1 "$IMPORTS" 2>/dev/null | grep -v '^$' || echo "  (none)"
+            read -rp "Filename: " GGUF_FILE
+            GGUF_FILE=$(basename -- "$GGUF_FILE")   # stripping path traversal
+            if [[ ! -f "${IMPORTS}"/"${GGUF_FILE}" ]]; then
+                log "ERROR: '${GGUF_FILE}' not found in ${IMPORTS}, try again"
+                continue
+            fi
+            read -rp "Name to give this model (e.g. mymodel:latest): " LOCAL_NAME
+            if [[ ! "$LOCAL_NAME" =~ ^[a-zA-Z0-9_.:-]+$ ]]; then
+                log "ERROR: invalid model name, try again"
+                continue
+            fi
+            log "Importing ${GGUF_FILE} as ${LOCAL_NAME}..."
+            if podman exec ollama sh -c "printf 'FROM /imports/%s\n' '${GGUF_FILE}' > /tmp/Modelfile && ollama create '${LOCAL_NAME}' -f /tmp/Modelfile";then
+                log "Import complete: ${LOCAL_NAME}"
+            else
+                log "ERROR: import failed for ${GGUF_FILE}"
+            fi
+            echo ""
+            read -rp "Pull/import another model? [y/N]: " again
+            [[ "$again" =~ ^[Yy]$ ]] && continue || break
+            ;;
+        *)
+            log "Invalid choice, try again"
+            continue
+            ;;
+    esac
+
+# debug
+#printf "starting pull\n"
+
+    log "Pulling model: $MODEL"
+    if podman exec ollama ollama pull "$MODEL"; then
+        log "Model pull complete: $MODEL"
+    else
+        log "ERROR: pull failed for '$MODEL' - check name, or note some HF repos (sharded GGUF) aren't supported yet"
+    fi
+    
+    echo ""
+    read -rp "Pull/import another model? [y/N]: " again
+    [[ "$again" =~ ^[Yy]$ ]] || break
+done
+
+# debug
+#printf "model selection finalized\n"
 
 # --- SearXNG ---
 # debug
@@ -214,7 +262,7 @@ for i in $(seq 1 12); do
 done
 
 # debug
-#printf "searxng alive\n"
+#printf "searxng finalized\n"
 
 # --- Open WebUI ---
 # debug
@@ -239,23 +287,25 @@ podman run -d \
     ghcr.io/open-webui/open-webui:latest
 
 log "Waiting for OpenWebUI to be ready..."
-for i in $(seq 1 12); do
+for i in $(seq 1 36); do
     if podman exec openwebui bash -c 'exec 3<>/dev/tcp/localhost/8080' >/dev/null 2>&1; then
         log "OpenWebUI ready after $((i * 5))s"
         break
     fi
-    if [[ $i -eq 12 ]]; then
-        log "WARNING: OpenWebUI not configurmed ready after 60s, check manually"
+    if [[ $i -eq 36 ]]; then
+        log "WARNING: OpenWebUI not confirmed ready after 180s, check manually"
     fi
     sleep 5
 done
 
 # debug
-#printf "webui alive\n"
+#printf "webui finalized\n"
 
+echo ""
 log "=== Cold start complete ==="
 podman ps --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}"
 echo ""
 IP=$(ip -4 addr show scope global | grep -oP '(?<=inet\s)\d+(\.\d+){3}' | head -1)
 log "Ollama reachable at: http://${IP}:11434"
 log "Open WebUI at: http://${IP}:3000"
+echo ""
