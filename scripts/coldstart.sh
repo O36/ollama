@@ -91,20 +91,20 @@ podman run -d \
 #printf "healthchecking ollama container\n"
 
 log "Waiting for Ollama to be ready..."
-for i in $(seq 1 30); do
+for i in $(seq 1 12); do
     if podman exec ollama ollama list >/dev/null 2>&1; then
-        log "Ollama ready after $((i * 2))s"
+        log "Ollama ready after $((i * 5))s"
         # debug
-        echo "ollama alive"
+        #printf "ollama alive\n"
         break
     fi
-    if [[ $i -eq 30 ]]; then
+    if [[ $i -eq 12 ]]; then
         log "ERROR: Ollama not ready after 60s, aborting"
         # debug
-        echo "ollama dead"
+        printf "ollama dead\n"
         exit 1
     fi
-    sleep 2
+    sleep 5
 done
 
 # debug
@@ -186,7 +186,18 @@ podman run -d \
     -p 8888:8080 \
     -v "${DATA}/searxng:/etc/searxng:Z" \
     docker.io/searxng/searxng:latest
-sleep 5
+
+log "Waiting for searxng to be ready..."
+for i in $(seq 1 12); do
+    if podman exec searxng wget -qO- http://localhost:8080/ >/dev/null 2>&1; then
+        log "Searxng ready after $((i * 5))s"
+        break
+    fi
+    if [[ $i -eq 12 ]]; then
+        log "WARNING: searxng not confirmed ready after 60s, continuing anyways"
+    fi
+    sleep 5
+done
 
 # debug
 #printf "searxng alive\n"
@@ -212,6 +223,18 @@ podman run -d \
     -e RAG_WEB_SEARCH_CONCURRENT_REQUESTS=10 \
     -e SEARXNG_QUERY_URL="http://searxng:8080/search?q=<query>" \
     ghcr.io/open-webui/open-webui:latest
+
+log "Waiting for OpenWebUI to be ready..."
+for i in $(seq 1 12); do
+    if podman exec openwebui bash -c 'exec 3<>/dev/tcp/localhost/8080' >/dev/null 2>&1; then
+        log "OpenWebUI ready after $((i * 5))s"
+        break
+    fi
+    if [[ $i -eq 12 ]]; then
+        log "WARNING: OpenWebUI not configurmed ready after 60s, check manually"
+    fi
+    sleep 5
+done
 
 # debug
 #printf "webui alive\n"
