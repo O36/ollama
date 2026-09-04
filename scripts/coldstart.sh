@@ -24,6 +24,20 @@ if [[ ! -f "$SECRETS" ]]; then
 fi
 source "$SECRETS"
 
+# --- validate required secrets ---
+required_vars=(SEARXNG_SECRET_KEY WEBUI_ADMIN_EMAIL WEBUI_ADMIN_PASSWORD WEBUI_SECRET_KEY)
+missing=()
+for var in "${required_vars[@]}";do
+    if [[ -z "${!var:-}" ]]; then
+        missing+=("$var")
+    fi
+done
+if [[ ${#missing[@]} -gt 0 ]]; then
+    log "ERROR: the following secrets are not set: ${missing[*]}"
+    log "Edit '$SECRETS' and fill them out (see instructions in secrets.template)"
+    exit 1
+fi
+
 # debug
 #printf "secrets sourced\n"
 
