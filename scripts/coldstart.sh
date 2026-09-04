@@ -239,13 +239,13 @@ podman run -d \
     ghcr.io/open-webui/open-webui:latest
 
 log "Waiting for OpenWebUI to be ready..."
-for i in $(seq 1 12); do
+for i in $(seq 1 36); do
     if podman exec openwebui bash -c 'exec 3<>/dev/tcp/localhost/8080' >/dev/null 2>&1; then
         log "OpenWebUI ready after $((i * 5))s"
         break
     fi
-    if [[ $i -eq 12 ]]; then
-        log "WARNING: OpenWebUI not configurmed ready after 60s, check manually"
+    if [[ $i -eq 36 ]]; then
+        log "WARNING: OpenWebUI not configurmed ready after 180s, check manually"
     fi
     sleep 5
 done
