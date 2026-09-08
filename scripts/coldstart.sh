@@ -47,7 +47,7 @@ log "=== Cold start ==="
 # debug
 #printf "checking tree\n"
 
-mkdir -p "$MODELS" "${DATA}/openwebui" "${DATA}/searxng" "$(dirname "$LOG")" "${DATA}/obsidian/vault" "$IMPORTS"
+mkdir -p "$MODELS" "${DATA}/openwebui" "${DATA}/searxng" "$(dirname "$LOG")" "${DATA}/obsidian/vault" "$IMPORTS" "${DATA}/obsidian/flatnotes-index" "${DATA}/obsidian/flatnotes-attachments"
 if [[ ! -f "${DATA}/obsidian/vault/index.md" ]]; then
     td=$(date -u +%Y-%m-%dT%H:%M:%SZ)
     cat > "${DATA}/obsidian/vault/index.md" << EOF
@@ -301,6 +301,32 @@ done
 # debug
 #printf "webui finalized\n"
 
+# --- Flatnotes (vault viewer) ---
+log "Starting flatnotes..."
+podman run -d \
+    --name flatnotes \
+    --network ollama-net \
+    --userns=keep-id \
+    --user "$(id -u):$(id -g)" \
+    -p 8081:8080 \
+    -e FLATNOTES_AUTH_TYPE=none \
+    -v "${DATA}/obsidian/vault:/data:ro,Z" \
+    -v "${DATA}/obsidian/flatnotes-index:/data/.flatnotes:Z" \
+    -v "${DATA}/obsidian/flatnotes-attachments:/data/attachments:Z" \
+docker.io/dullage/flatnotes:latest
+
+log "Waiting for flatnotes to be ready..."
+for i in $(seq 1 12); do
+    if podman exec flatnotes bash -c 'exec 3<>/dev/tcp/localhost/8080' >/dev/null 2>&1; then
+        log "flatnotes ready after $((i * 5))s"
+        break
+    fi
+    if [[ $i -eq 12 ]]; then
+        log "WARNING: flatnotes not confirmed ready after 60s, continuing anyway"
+    fi
+    sleep 5
+done
+
 echo ""
 log "=== Cold start complete ==="
 podman ps --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}"
@@ -308,4 +334,5 @@ echo ""
 IP=$(ip -4 addr show scope global | grep -oP '(?<=inet\s)\d+(\.\d+){3}' | head -1)
 log "Ollama reachable at: http://${IP}:11434"
 log "Open WebUI at: http://${IP}:3000"
+log "Flatnotes at: http://${IP}:8081"
 echo ""

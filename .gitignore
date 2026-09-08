@@ -20,6 +20,10 @@
 !/data/searxng/limiter.toml
 !/data/obsidian/
 !/data/obsidian/.gitkeep
+!/data/obsidian/flatnotes-attachments/
+!/data/obsidian/flatnotes-attachments/.gitkeep
+!/data/obsidian/flatnotes-index/
+!/data/obsidian/flatnotes-index/.gitkeep
 
 # track placeholders
 !/data/models/

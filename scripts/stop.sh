@@ -30,6 +30,14 @@ else
     log "container openwebui not found..."
 fi
 
+log "=== stopping flatnotes services ==="
+if podman container exists flatnotes; then
+    log "stopping flatnotes container..."
+    podman stop flatnotes
+else
+    log "container flatnotes not found..."
+fi
+
 log "=== stop complete ==="
 
 podman ps -a
@@ -43,7 +51,7 @@ if [[ "$answer" != "y" ]]; then
 fi
 
 log "removing containers..."
-for container in ollama searxng openwebui; do
+for container in ollama searxng openwebui flatnotes; do
     if podman container exists "$container"; then
         podman rm "$container"
         log "removed $container"
